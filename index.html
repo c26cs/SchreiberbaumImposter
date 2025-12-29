@@ -10,6 +10,8 @@ body {
   font-family:Arial;
   text-align:center;
 }
+h1 { margin-top:20px; }
+#lobby, #circleWrap, #reveal { margin-top:20px; }
 #circleWrap {
   display:grid;
   grid-template-columns:repeat(3, 1fr);
@@ -38,6 +40,20 @@ button {
   font-size:16px;
   margin-top:20px;
 }
+.checkbox-list {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  max-width:400px;
+  margin:auto;
+}
+.checkbox-list label {
+  background:#222;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -45,17 +61,35 @@ button {
 
 <h1>🎭 Circle Imposter</h1>
 
-<div id="circleWrap"></div>
+<!-- Lobby -->
+<div id="lobby">
+  <h2>Select Players</h2>
+  <div class="checkbox-list" id="playerCheckboxes"></div>
 
+  <h2>Select Number of Imposters</h2>
+  <select id="impCountSelect">
+    <option value="1" selected>1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+  </select>
+  <br>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- Circle view -->
+<div id="circleWrap" class="hidden"></div>
+
+<!-- Reveal card -->
 <div id="reveal" class="hidden">
   <div id="card"></div>
   <button onclick="closeCard()">Done / Pass Phone</button>
 </div>
 
 <script>
-const players = ["Ben","Carly","Russ","Lexi","Deb","Paul","Lori","Zach"];
-const impostersCount = 1;
+// Possible players
+const allPlayers = ["Ben","Carly","Russ","Lexi","Deb","Paul","Lori","Zach"];
 
+// Word categories (example, you can expand)
 const categories = {
   "People": ["Ryan Fisher","Carly Schreiber","Lexi Schreiber"],
   "Places": ["Centennial","Vanderbilt","Burger King"],
@@ -63,23 +97,67 @@ const categories = {
   "Objects": ["Sea Bob","Dyson"]
 };
 
-let chosenCategory = Object.keys(categories)[Math.floor(Math.random()*4)];
-let chosenWord = categories[chosenCategory][Math.floor(Math.random()*categories[chosenCategory].length)];
+let chosenPlayers = [];
 let imposters = [];
-while(imposters.length < impostersCount){
-  let r = Math.floor(Math.random()*players.length);
-  if(!imposters.includes(r)) imposters.push(r);
-}
+let chosenCategory = "";
+let chosenWord = "";
 
-const wrap = document.getElementById("circleWrap");
-players.forEach((name,i)=>{
-  let div = document.createElement("div");
-  div.className="circle";
-  div.innerText=name;
-  div.onclick = ()=>reveal(i);
-  wrap.appendChild(div);
+// Build lobby checkboxes
+const playerCheckboxes = document.getElementById("playerCheckboxes");
+allPlayers.forEach(name => {
+  const label = document.createElement("label");
+  label.innerHTML = `<input type="checkbox" value="${name}" checked> ${name}`;
+  playerCheckboxes.appendChild(label);
 });
 
+// Start the game
+function startGame(){
+  chosenPlayers = Array.from(document.querySelectorAll("#playerCheckboxes input:checked")).map(c => c.value);
+  if(chosenPlayers.length < 3){
+    alert("Select at least 3 players!");
+    return;
+  }
+
+  // Select number of imposters
+  const impCount = Number(document.getElementById("impCountSelect").value);
+  if(impCount >= chosenPlayers.length){
+    alert("Too many imposters for selected players!");
+    return;
+  }
+
+  // Randomly assign imposters
+  imposters = [];
+  while(imposters.length < impCount){
+    let r = Math.floor(Math.random()*chosenPlayers.length);
+    if(!imposters.includes(r)) imposters.push(r);
+  }
+
+  // Pick random category and word
+  const categoryKeys = Object.keys(categories);
+  chosenCategory = categoryKeys[Math.floor(Math.random()*categoryKeys.length)];
+  const words = categories[chosenCategory];
+  chosenWord = words[Math.floor(Math.random()*words.length)];
+
+  // Hide lobby, show circles
+  document.getElementById("lobby").classList.add("hidden");
+  buildCircles();
+}
+
+// Build player circles
+function buildCircles(){
+  const wrap = document.getElementById("circleWrap");
+  wrap.innerHTML = "";
+  chosenPlayers.forEach((name,i) => {
+    let div = document.createElement("div");
+    div.className="circle";
+    div.innerText=name;
+    div.onclick = ()=>reveal(i);
+    wrap.appendChild(div);
+  });
+  wrap.classList.remove("hidden");
+}
+
+// Reveal role / word
 function reveal(i){
   document.getElementById("circleWrap").classList.add("hidden");
   document.getElementById("reveal").classList.remove("hidden");
@@ -89,6 +167,7 @@ function reveal(i){
     : "Your word:\n" + chosenWord;
 }
 
+// Close card and pass phone
 function closeCard(){
   document.getElementById("reveal").classList.add("hidden");
   document.getElementById("circleWrap").classList.remove("hidden");
